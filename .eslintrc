@@ -1,0 +1,13 @@
+{
+  "extends": [
+    "oclif",
+    "oclif-typescript"
+  ],
+  "rules": {
+    "no-console": "off",
+    "@typescript-eslint/ban-ts-ignore": "off",
+    "@typescript-eslint/no-use-before-define": "off",
+    "unicorn/escape-case": "off",
+    "unicorn/no-hex-escape": "off"
+  }
+}

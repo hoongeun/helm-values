@@ -1,0 +1,77 @@
+{
+  "name": "helm-values",
+  "description": "Helm plugin to manage multiple subchart by env",
+  "version": "0.0.0",
+  "author": "Hoongeun Cho",
+  "bin": {
+    "helm-values": "./bin/run"
+  },
+  "bugs": "https://github.com/hoongeun/helm-values/issues",
+  "dependencies": {
+    "@oclif/command": "^1",
+    "@oclif/config": "^1",
+    "@oclif/plugin-help": "^3",
+    "ejs": "^3.1.6",
+    "js-yaml": "^4.0.0",
+    "nunjucks": "^3.2.3",
+    "outdent": "^0.8.0",
+    "prismjs": "^1.23.0",
+    "shelljs": "^0.8.4",
+    "supports-color": "^8.1.1",
+    "tslib": "^1"
+  },
+  "devDependencies": {
+    "@oclif/dev-cli": "^1",
+    "@oclif/test": "^1",
+    "@types/chai": "^4",
+    "@types/ejs": "^3.0.6",
+    "@types/js-yaml": "^4.0.0",
+    "@types/mocha": "^5",
+    "@types/node": "^10",
+    "@types/nunjucks": "^3.1.4",
+    "@types/prismjs": "^1.16.2",
+    "@types/shelljs": "^0.8.8",
+    "@types/supports-color": "^7.2.0",
+    "chai": "^4",
+    "cross-env": "^7.0.3",
+    "eslint": "^5.13",
+    "eslint-config-oclif": "^3.1",
+    "eslint-config-oclif-typescript": "^0.1",
+    "globby": "^10",
+    "mocha": "^5",
+    "nyc": "^14",
+    "ts-node": "^8",
+    "typescript": "^3.3"
+  },
+  "engines": {
+    "node": ">=8.0.0"
+  },
+  "files": [
+    "/bin",
+    "/lib",
+    "/npm-shrinkwrap.json",
+    "/oclif.manifest.json"
+  ],
+  "homepage": "https://github.com/hoongeun/helm-values",
+  "keywords": [
+    "oclif"
+  ],
+  "license": "MIT",
+  "main": "lib/index.js",
+  "oclif": {
+    "commands": "./lib/commands",
+    "bin": "helm-values",
+    "plugins": [
+      "@oclif/plugin-help"
+    ]
+  },
+  "repository": "hoongeun/helm-values",
+  "scripts": {
+    "postpack": "rm -f oclif.manifest.json",
+    "posttest": "eslint . --ext .ts --config .eslintrc",
+    "prepack": "rm -rf lib && tsc -b && oclif-dev manifest && oclif-dev readme",
+    "test": "nyc --extension .ts mocha --forbid-only \"test/**/*.test.ts\"",
+    "version": "oclif-dev readme && git add README.md"
+  },
+  "types": "lib/index.d.ts"
+}
