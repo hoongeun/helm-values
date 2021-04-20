@@ -1,7 +1,8 @@
 helm-values
 ===========
 
-Helm plugin to manage multiple subcharts' values by env
+Helm plugin to manage multiple subcharts' values by env.
+
 
 [![oclif](https://img.shields.io/badge/cli-oclif-brightgreen.svg)](https://oclif.io)
 [![Version](https://img.shields.io/npm/v/helm-values.svg)](https://npmjs.org/package/helm-values)
@@ -12,10 +13,30 @@ Helm plugin to manage multiple subcharts' values by env
 * [Usage](#usage)
 * [Commands](#commands)
 <!-- tocstop -->
+
+# Why I made this?
+There's already exists simmilar project [helm-values](https://github.com/shihyuho/helm-values). But it doesn't meet my needs.
+
+My needs are
+* Helm doesn't support the env patch feature like [kustomize](https://kustomize.io)
+* I want to manage values.yaml by dividing in each subcharts
+* A json, yaml formats aren't programmable
+
+So I decided to make my own tools for these.
+
+## How it works?
+1. init - Initiate the helm-values
+2. generate - A helper tools to generate multiple manifests or templates in single command
+3. combine - Combine template([nunjucks](https://mozilla.github.io/nunjucks/), [ejs](https://ejs.co/)) with data model
+4. patch - Patch `[stage].yaml` with `base.yaml` if it is avaiable
+5. merge - Merge subcharts
+6. clean - A helper tools to clean the `values.yaml` and processed data
+
+
 # Usage
 <!-- usage -->
 ```sh-session
-$ yarn global add helm-values
+$ helm plugin install https://github.com/hoongeun/helm-values.git # or yarn global add helm-values
 $ cd [HELM_DIRECTORY]
 $ helm-values init
 running command...
