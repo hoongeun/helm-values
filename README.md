@@ -15,12 +15,12 @@ Helm plugin to manage multiple subcharts' values by env.
 <!-- tocstop -->
 
 # Why I made this?
-There's already exists simmilar project [helm-values](https://github.com/shihyuho/helm-values). But it doesn't meet my needs.
+There's already simmilar project [helm-values](https://github.com/shihyuho/helm-values). But it doesn't meet my needs.
 
 My needs are
 * Helm doesn't support the env patch feature like [kustomize](https://kustomize.io)
 * I want to manage values.yaml by dividing in each subcharts
-* A json, yaml formats aren't programmable
+* The json, yaml formats aren't programmable
 
 So I decided to make my own tools for these.
 
@@ -28,8 +28,11 @@ So I decided to make my own tools for these.
 1. init - Initiate the helm-values
 2. generate - A helper tools to generate multiple manifests or templates in single command
 3. combine - Combine template([nunjucks](https://mozilla.github.io/nunjucks/), [ejs](https://ejs.co/)) with data model
+`/mysql/prod.yaml.njk + /mysql/data.yaml -> /mysql/prod.yaml`
 4. patch - Patch `[stage].yaml` with `base.yaml` if it is avaiable
+`/mysql/base.yaml + /mysql/prod.yaml -> /mysql/values.yaml`
 5. merge - Merge subcharts
+`/mysql/values.yaml + /redis/values.yaml -> /values.yaml`
 6. clean - A helper tools to clean the `values.yaml` and processed data
 
 
