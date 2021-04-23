@@ -1,5 +1,7 @@
 import * as prism from 'prismjs'
 import * as supportsColor from 'supports-color'
+import outdent from 'outdent'
+import * as fs from 'fs'
 
 function highjackRenderer() {
   // @ts-ignore
@@ -98,3 +100,31 @@ export function highlight(text: string, language: string): string {
   const tokens = prism.tokenize(text, grammar)
   return prism.Token.stringify(tokens, language)
 }
+
+// fs.writeFileSync('./highlightaaa', highlight(outdent`
+//   str: "string"
+//   boolean: true
+//   number: 100
+//   array:
+//       - item1
+//       - item2
+//   obj:
+//       item1: 1
+//       item2: 2
+//   # comment
+//   `, 'yaml'))
+
+// fs.writeFileSync('./highlightbbb', highlight(outdent`
+//   {
+//     "str": "string",
+//     "boolean": true,
+//     "number": 100,
+//     "array": [
+//       "item1",
+//       "item2"
+//     ],
+//     "obj": {
+//       "item1": 1,
+//       "item2": 2
+//     }
+//   }`, 'json'))
