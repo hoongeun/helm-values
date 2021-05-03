@@ -8,10 +8,10 @@ Helm plugin to manage multiple subcharts' values by env.
 [![License](https://img.shields.io/npm/l/helm-values.svg)](https://github.com/hoongeun/helm-values/blob/master/package.json)
 
 <!-- toc -->
-
-- [Usage](#usage)
-- [Why I made this](#why-i-made-this)
-- [Commands](#commands)
+* [helm-values](#helm-values)
+* [Why I made this?](#why-i-made-this)
+* [Usage](#usage)
+* [Commands](#commands)
 <!-- tocstop -->
 
 # Why I made this?
@@ -30,152 +30,211 @@ So I decided to make my own tools for these.
 
 - init - Initiate the helm-values
 
+  ![helm-values-init](docs/res/helm-values-init.png)
+
 - generate - A helper tools to generate multiple manifests or templates in single command
+
+  ![helm-values-generate](docs/res/helm-values-generate.png)
 
 - build - This operation is a combination of combine, patch, merge
 
   - combine - Combine template([nunjucks](https://mozilla.github.io/nunjucks/), [ejs](https://ejs.co/)) with data model
     `/mysql/prod.yaml.njk + /mysql/data.yaml -> /mysql/prod.yaml`
 
-  - patch - Patch `[stage].yaml` with `base.yaml` if it is avaiable
+    ![helm-values-combine](docs/res/helm-values-combine.png)
 
-  `/mysql/base.yaml + /mysql/prod.yaml -> /mysql/values.yaml`
+  - patch - Patch `[stage].yaml` with `base.yaml` if it is avaiable
+    `/mysql/base.yaml + /mysql/prod.yaml -> /mysql/values.yaml`
+
+    ![helm-values-patch](docs/res/helm-values-patch.png)
 
   - merge - Merge subcharts
     `/mysql/values.yaml + /redis/values.yaml -> /values.yaml`
 
+    ![helm-values-merge](docs/res/helm-values-merge.png)
+
 - clean - A helper tools to clean the `values.yaml` and processed data
+
+  ![helm-values-clean](docs/res/helm-values-clean.png)
+
 
 # Usage
 
 <!-- usage -->
-
 ```sh-session
-$ helm plugin install https://github.com/hoongeun/helm-values.git # or yarn global add helm-values
-$ cd [HELM_DIRECTORY]
-
-$ helm-values init
-Initiate helm-values!
-
-$ helm-values generate -s dev prod test
-# helm-values automactically parse the chart.yaml or requirements.yaml files in your [HELM_DIRECTORY]
-# You can also set the charts manually by adding argv
-# ex) helm-values generate -s dev -s prod -s test mysql redis
-$ helm-values build [CHART]
-USAGE
-  $ helm-values COMMAND
+$ npm install -g helm-values
+$ helm-values COMMAND
+running command...
+$ helm-values (-v|--version|version)
+helm-values/0.0.1 linux-x64 node-v14.15.5
 $ helm-values --help [COMMAND]
 USAGE
   $ helm-values COMMAND
 ...
 ```
-
 <!-- usagestop -->
 
 # Commands
 
 <!-- commands -->
+* [`helm-values build`](#helm-values-build)
+* [`helm-values clean [CHART]`](#helm-values-clean-chart)
+* [`helm-values combine [CHART]`](#helm-values-combine-chart)
+* [`helm-values generate [CHART]`](#helm-values-generate-chart)
+* [`helm-values help [COMMAND]`](#helm-values-help-command)
+* [`helm-values init`](#helm-values-init)
+* [`helm-values merge [CHART]`](#helm-values-merge-chart)
+* [`helm-values patch [CHART]`](#helm-values-patch-chart)
 
-- [`helm-values init`](#helm-values-init)
-- [`helm-values generate [CHART]...`](#helm-values-generate-chart)
-- [`helm-values build [CHART]...`](#helm-values-build-chart)
-- [`helm-values combine [CHART]...`](#helm-values-combine-chart)
-- [`helm-values patch [CHART]...`](#helm-values-patch-chart)
-- [`helm-values merge [CHART]...`](#helm-values-merge-chart)
-- [`helm-values clean [CHART]...`](#helm-values-clean-chart)
-- [`helm-values help [COMMAND]...`](#helm-values-help-command)
+## `helm-values build`
+
+```
+USAGE
+  $ helm-values build
+
+OPTIONS
+  -f, --format=(yaml|json)  [default: yaml] preferred format of manifest
+  -h, --help                show CLI help
+  -o, --output=output       path to output
+  -s, --stage=stage         specify the stage to build
+
+EXAMPLE
+  $ helm-values build
+  Build complete!
+```
+
+_See code: [src/commands/build.ts](https://github.com/hoongeun/helm-values/blob/v0.0.1/src/commands/build.ts)_
+
+## `helm-values clean [CHART]`
+
+```
+USAGE
+  $ helm-values clean [CHART]
+
+OPTIONS
+  -h, --help             show CLI help
+  -s, --stage=stage      stages to clean
+  --remove-subdirectory  remove subdirectories in chart
+
+EXAMPLE
+  $ helm-values clean
+  Everything is clear now!
+```
+
+_See code: [src/commands/clean.ts](https://github.com/hoongeun/helm-values/blob/v0.0.1/src/commands/clean.ts)_
+
+## `helm-values combine [CHART]`
+
+```
+USAGE
+  $ helm-values combine [CHART]
+
+OPTIONS
+  -h, --help         show CLI help
+  -s, --stage=stage  [default: ] stage to Combine
+
+EXAMPLE
+  $ helm-values combine -s dev -- mysql
+  Combine done!
+```
+
+_See code: [src/commands/combine.ts](https://github.com/hoongeun/helm-values/blob/v0.0.1/src/commands/combine.ts)_
+
+## `helm-values generate [CHART]`
+
+```
+USAGE
+  $ helm-values generate [CHART]
+
+OPTIONS
+  -d, --data
+  -f, --format=(yaml|json)  [default: yaml] preferred format of manifest
+  -h, --help                show CLI help
+
+  -s, --stage=stage         [default: ] stages to generate (If you do not specify the stages, then it will refer the
+                            stages values in '/values/.helmvalues')
+
+  -t, --template=(njk|ejs)  preferred template of manifest
+
+  --base-only               don't generate base.yaml or base.json
+
+  --no-base                 generate only base
+
+EXAMPLES
+  $ helm-values generate
+  Generate mysql, redis successfully!
+  $ helm-values generate -- mysql redis
+  Generate mysql, redis successfully!
+  $ helm-values generate -s prod dev test -- mysql redis
+  Generate mysql, redis successfully!
+```
+
+_See code: [src/commands/generate.ts](https://github.com/hoongeun/helm-values/blob/v0.0.1/src/commands/generate.ts)_
+
+## `helm-values help [COMMAND]`
+
+display help for helm-values
+
+```
+USAGE
+  $ helm-values help [COMMAND]
+
+ARGUMENTS
+  COMMAND  command to show help for
+
+OPTIONS
+  --all  see all commands in CLI
+```
+
+_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v3.2.2/src/commands/help.ts)_
 
 ## `helm-values init`
-
-describe the command here
 
 ```
 USAGE
   $ helm-values init
 
-OPTIONS
-  -f, --force
-  -h, --help       show CLI help
-  -n, --name=name  name to print
-
 EXAMPLE
-  $ helm-values hello
-  hello world from ./src/hello.ts!
+  $ helm-values init
+  Initiate helm-values!
 ```
 
-## `helm-values generate [CHART]`
-
-display generate for helm-values
-
-```
-USAGE
-  $ helm-values help [COMMAND]
-
-ARGUMENTS
-  COMMAND  command to show help for
-
-OPTIONS
-  --all  see all commands in CLI
-```
-
-## `helm-values build [CHART]`
-
-display build for helm-values
-
-```
-USAGE
-  $ helm-values help [COMMAND]
-
-ARGUMENTS
-  COMMAND  command to show help for
-
-OPTIONS
-  --all  see all commands in CLI
-```
-
-## `helm-values combine [CHART]`
-
-display combine for helm-values
-
-```
-USAGE
-  $ helm-values help [COMMAND]
-
-ARGUMENTS
-  COMMAND  command to show help for
-
-OPTIONS
-  --all  see all commands in CLI
-```
-
-## `helm-values patch [CHART]`
-
-display merge for helm-values
-
-```
-USAGE
-  $ helm-values help [COMMAND]
-
-ARGUMENTS
-  COMMAND  command to show help for
-
-OPTIONS
-  --all  see all commands in CLI
-```
+_See code: [src/commands/init.ts](https://github.com/hoongeun/helm-values/blob/v0.0.1/src/commands/init.ts)_
 
 ## `helm-values merge [CHART]`
 
-display merge for helm-values
+```
+USAGE
+  $ helm-values merge [CHART]
+
+OPTIONS
+  -f, --format=(yaml|json)  [default: yaml] preferred format of manifest
+  -h, --help                show CLI help
+  -p, --print               print the output in your console
+
+EXAMPLE
+  $ helm-values merge
+  Merge done!
+```
+
+_See code: [src/commands/merge.ts](https://github.com/hoongeun/helm-values/blob/v0.0.1/src/commands/merge.ts)_
+
+## `helm-values patch [CHART]`
 
 ```
 USAGE
-  $ helm-values help [COMMAND]
-
-ARGUMENTS
-  COMMAND  command to show help for
+  $ helm-values patch [CHART]
 
 OPTIONS
-  --all  see all commands in CLI
+  -f, --format=(yaml|json)  [default: yaml] preferred format of manifest
+  -h, --help                show CLI help
+  -p, --print               print the output in your console
+  -s, --stage=stage         (required) stage to patch
+
+EXAMPLE
+  $ helm-values patch -s dev -- mysql
+  Patch done!
 ```
 
+_See code: [src/commands/patch.ts](https://github.com/hoongeun/helm-values/blob/v0.0.1/src/commands/patch.ts)_
 <!-- commandsstop -->
