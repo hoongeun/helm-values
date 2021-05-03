@@ -1,29 +1,36 @@
-import {expect, test, command} from '@oclif/test'
+import {expect, test} from '@oclif/test'
 import * as p from 'path'
-import outdent from 'outdent'
 import * as cproc from 'child_process'
 import * as shelljs from 'shelljs'
-import { testRoot, validateFile, validateDirectory } from '../utils'
+import {testRoot} from '../utils'
+import {doesDirectoryExist} from '../../src/utils/path'
 
 describe('init', () => {
   beforeEach(() => {
-    process.env.HELMVALUES_CHART_HOME = p.join(testRoot(), 'commands', 'fixture', 'init')
-    cproc.execSync("helm create init", {
-      cwd: p.join(testRoot(), 'commands', 'fixture'),
+    const testfield = p.join(testRoot(), 'commands', 'testfield', 'init')
+
+    process.env.HELMVALUES_CHART_HOME = testfield
+
+    if (doesDirectoryExist(testfield)) {
+      shelljs.rm('-rf', testfield)
+    }
+
+    cproc.execSync('helm create init', {
+      cwd: p.join(testRoot(), 'commands', 'testfield'),
     })
   })
 
   afterEach(() => {
-    const testbed = p.join(testRoot(), 'commands', 'fixture', 'init')
-    shelljs.rm("-rf", testbed)
+    const testfield = p.join(testRoot(), 'commands', 'testfield', 'init')
+    shelljs.rm('-rf', testfield)
   })
 
   test
   .stdout()
   .command(['init'], {
-      root: "../testbed/init/init-test"
+    root: p.join(testRoot(), 'commands', 'testfield', 'init'),
   })
   .it('runs init', ctx => {
-    expect(ctx.stdout).to.contain('Initiate successfully!')
+    expect(ctx.stdout).to.contain('Initiate helm-values!')
   })
 })

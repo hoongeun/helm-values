@@ -1,8 +1,6 @@
-helm-values
-===========
+# helm-values
 
 Helm plugin to manage multiple subcharts' values by env.
-
 
 [![oclif](https://img.shields.io/badge/cli-oclif-brightgreen.svg)](https://oclif.io)
 [![Version](https://img.shields.io/npm/v/helm-values.svg)](https://npmjs.org/package/helm-values)
@@ -10,40 +8,56 @@ Helm plugin to manage multiple subcharts' values by env.
 [![License](https://img.shields.io/npm/l/helm-values.svg)](https://github.com/hoongeun/helm-values/blob/master/package.json)
 
 <!-- toc -->
-* [Usage](#usage)
-* [Commands](#commands)
+
+- [Usage](#usage)
+- [Why I made this](#why-i-made-this)
+- [Commands](#commands)
 <!-- tocstop -->
 
 # Why I made this?
+
 There's already simmilar project [helm-values](https://github.com/shihyuho/helm-values). But it doesn't meet my needs.
 
 My needs are
-* Helm doesn't support the env patch feature like [kustomize](https://kustomize.io)
-* I want to manage values.yaml by dividing in each subcharts
-* The json, yaml formats aren't programmable
+
+- Helm doesn't support the env patch feature like [kustomize](https://kustomize.io)
+- I want to manage values.yaml by dividing in each subcharts
+- The `values.yaml`, `values.json` are no more programmable
 
 So I decided to make my own tools for these.
 
 ## How it works?
-1. init - Initiate the helm-values
-2. generate - A helper tools to generate multiple manifests or templates in single command
-3. combine - Combine template([nunjucks](https://mozilla.github.io/nunjucks/), [ejs](https://ejs.co/)) with data model
-`/mysql/prod.yaml.njk + /mysql/data.yaml -> /mysql/prod.yaml`
-4. patch - Patch `[stage].yaml` with `base.yaml` if it is avaiable
-`/mysql/base.yaml + /mysql/prod.yaml -> /mysql/values.yaml`
-5. merge - Merge subcharts
-`/mysql/values.yaml + /redis/values.yaml -> /values.yaml`
-6. clean - A helper tools to clean the `values.yaml` and processed data
 
+- init - Initiate the helm-values
+
+- generate - A helper tools to generate multiple manifests or templates in single command
+
+- build - This operation is a combination of combine, patch, merge
+
+  - combine - Combine template([nunjucks](https://mozilla.github.io/nunjucks/), [ejs](https://ejs.co/)) with data model
+    `/mysql/prod.yaml.njk + /mysql/data.yaml -> /mysql/prod.yaml`
+
+  - patch - Patch `[stage].yaml` with `base.yaml` if it is avaiable
+
+  `/mysql/base.yaml + /mysql/prod.yaml -> /mysql/values.yaml`
+
+  - merge - Merge subcharts
+    `/mysql/values.yaml + /redis/values.yaml -> /values.yaml`
+
+- clean - A helper tools to clean the `values.yaml` and processed data
 
 # Usage
+
 <!-- usage -->
+
 ```sh-session
 $ helm plugin install https://github.com/hoongeun/helm-values.git # or yarn global add helm-values
 $ cd [HELM_DIRECTORY]
+
 $ helm-values init
-running command...
-$ helm-values generate -s dev -s prod -s test
+Initiate helm-values!
+
+$ helm-values generate -s dev prod test
 # helm-values automactically parse the chart.yaml or requirements.yaml files in your [HELM_DIRECTORY]
 # You can also set the charts manually by adding argv
 # ex) helm-values generate -s dev -s prod -s test mysql redis
@@ -55,17 +69,21 @@ USAGE
   $ helm-values COMMAND
 ...
 ```
+
 <!-- usagestop -->
+
 # Commands
+
 <!-- commands -->
-* [`helm-values init`](#helm-values-init)
-* [`helm-values generate [CHART]...`](#helm-values-generate-chart)
-* [`helm-values build [CHART]...`](#helm-values-build-chart)
-* [`helm-values combine [CHART]...`](#helm-values-combine-chart)
-* [`helm-values patch [CHART]...`](#helm-values-patch-chart)
-* [`helm-values merge [CHART]...`](#helm-values-merge-chart)
-* [`helm-values clean [CHART]...`](#helm-values-clean-chart)
-* [`helm-values help [COMMAND]...`](#helm-values-help-command)
+
+- [`helm-values init`](#helm-values-init)
+- [`helm-values generate [CHART]...`](#helm-values-generate-chart)
+- [`helm-values build [CHART]...`](#helm-values-build-chart)
+- [`helm-values combine [CHART]...`](#helm-values-combine-chart)
+- [`helm-values patch [CHART]...`](#helm-values-patch-chart)
+- [`helm-values merge [CHART]...`](#helm-values-merge-chart)
+- [`helm-values clean [CHART]...`](#helm-values-clean-chart)
+- [`helm-values help [COMMAND]...`](#helm-values-help-command)
 
 ## `helm-values init`
 
@@ -85,7 +103,6 @@ EXAMPLE
   hello world from ./src/hello.ts!
 ```
 
-
 ## `helm-values generate [CHART]`
 
 display generate for helm-values
@@ -100,7 +117,6 @@ ARGUMENTS
 OPTIONS
   --all  see all commands in CLI
 ```
-
 
 ## `helm-values build [CHART]`
 
@@ -117,7 +133,6 @@ OPTIONS
   --all  see all commands in CLI
 ```
 
-
 ## `helm-values combine [CHART]`
 
 display combine for helm-values
@@ -132,7 +147,6 @@ ARGUMENTS
 OPTIONS
   --all  see all commands in CLI
 ```
-
 
 ## `helm-values patch [CHART]`
 
@@ -149,7 +163,6 @@ OPTIONS
   --all  see all commands in CLI
 ```
 
-
 ## `helm-values merge [CHART]`
 
 display merge for helm-values
@@ -164,6 +177,5 @@ ARGUMENTS
 OPTIONS
   --all  see all commands in CLI
 ```
-
 
 <!-- commandsstop -->

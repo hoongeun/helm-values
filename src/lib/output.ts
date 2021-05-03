@@ -8,20 +8,23 @@ export interface Output {
   content: string;
 }
 
-export type Lang = 'yaml'|'json'|'raw'
+export type Lang = 'yaml' | 'json' | 'raw';
 
 export type PrintOptions = {
-  lang: 'auto'|Lang;
-}
+  lang: 'auto' | Lang;
+};
 
 export const DefaultPrintOptions: PrintOptions = {
   lang: 'auto',
 }
 
 export function print(outputs: Output[], options?: Partial<PrintOptions>) {
-  const printOptions: PrintOptions = Object.assign(DefaultPrintOptions, options)
+  const printOptions: PrintOptions = Object.assign(
+    DefaultPrintOptions,
+    options,
+  )
 
-  function getlang(output: Output, lang: 'auto'|Lang): Lang {
+  function getlang(output: Output, lang: 'auto' | Lang): Lang {
     switch (lang) {
     case 'auto': {
       switch (p.extname(output.path)) {
@@ -44,17 +47,26 @@ export function print(outputs: Output[], options?: Partial<PrintOptions>) {
 
   if (outputs.length === 1) {
     const lang = getlang(outputs[0], printOptions.lang)
-    const toPrint = lang === 'raw' ? outputs[0].content : highlight(outputs[0].content, lang)
+    const toPrint =
+      lang === 'raw' ? outputs[0].content : highlight(outputs[0].content, lang)
     console.log(toPrint)
   } else {
     const line = '-----------------------------------------------'
-    console.log(outputs.map(f => {
-      const lang = getlang(outputs[0], printOptions.lang)
-      const toPrint = lang === 'raw' ? f.content : highlight(f.content, lang)
-      return `${line}\n${f.path}\n${line}\n${toPrint}\n${line}`
-    }).join('\n\n'))
+    console.log(
+      outputs
+      .map(f => {
+        const lang = getlang(outputs[0], printOptions.lang)
+        const toPrint =
+            lang === 'raw' ? f.content : highlight(f.content, lang)
+        return `${line}\n${f.path}\n${line}\n${toPrint}\n${line}`
+      })
+      .join('\n\n'),
+    )
   }
 }
+
+// TODO: move to operator to use context
+// TODO: add virtual file option
 
 export function writeOutputs(outputs: Output[]) {
   outputs.forEach(f => {
@@ -62,9 +74,12 @@ export function writeOutputs(outputs: Output[]) {
   })
 }
 
-export function file2Output(file: File): Output {
+// File: File has a name that is relative path of values dir
+// Output: Output has a name that is absolute path
+
+export function file2Output(root: string, file: File): Output {
   return {
-    path: file.name,
+    path: p.join(root, file.path),
     content: file.content,
   }
 }

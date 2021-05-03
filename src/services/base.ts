@@ -7,11 +7,11 @@ export abstract class BaseOperator<T, U> {
     this.context = context
   }
 
-  abstract action(target: T): U;
+  abstract action(target: T): Promise<U>;
 }
 
 export abstract class Operator<T, U> extends BaseOperator<T, U> {
-  protected context: Context
+  protected context: Context;
 
   constructor(context: Context) {
     super(context)
@@ -20,11 +20,13 @@ export abstract class Operator<T, U> extends BaseOperator<T, U> {
 }
 
 export abstract class BatchOperator<T, U> extends Operator<T, U> {
-  public abstract action(target: T): U
+  public abstract action(target: T): Promise<U>;
 
-  public batch(targets: T[]): U[] {
-    return targets.map((target: T) => {
-      return this.action(target)
-    })
+  public async batch(targets: T[]): Promise<U[]> {
+    return Promise.all(
+      targets.map((target: T) => {
+        return this.action(target)
+      }),
+    )
   }
 }

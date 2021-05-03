@@ -1,83 +1,103 @@
 import {Command, flags} from '@oclif/command'
-import * as p from 'path'
 import {getContext} from '../lib/context'
 import {Combiner} from '../services/combine'
-import {Stage, StagePatcher} from '../services/patch'
+import {StagePatcher} from '../services/patch'
 import {Merger} from '../services/merge'
 import {writeOutputs} from '../lib/output'
-import {findInvalidCharts, findInvalidPatchValues, loadChartDependencies} from '../lib/chart'
-
+import {
+  findUninstalledSubcharts,
+  findInvalidPatchValues,
+  loadChartDependencies,
+} from '../lib/chart'
 
 export default class Build extends Command {
+  static strict = false
+
   static examples = [
     `$ helm-values build
 Build complete!`,
-  ]
+  ];
 
   static flags = {
     help: flags.help({char: 'h'}),
-    stage: flags.string({char: 's'}),
-    all: flags.boolean({char: 'a', description: 'patch all if it is possible', default: false}),
-    output: flags.string({char: 'o', description: ''}),
-  }
+    stage: flags.string({
+      char: 's',
+      description: 'specify the stage to build',
+    }),
+    output: flags.string({char: 'o', description: 'path to output'}),
+    format: flags.enum({
+      char: 'f',
+      options: ['yaml', 'json'],
+      description: 'preferred format of manifest',
+      default: 'yaml',
+    }),
+  };
 
   async run() {
     const {flags, argv} = this.parse(Build)
-    const stage = (flags.stage || process.env.HELM_STAGE) as Stage
+    const stage = flags.stage ?? process.env.HELM_STAGE ?? ''
 
-    let charts: string[] = []
+    let charts: string[] = argv
 
-    if (flags.all) {
-      if (argv.length > 0) {
-        this.error(`you shouldn't set the charts ${argv.join(', ')}`)
-      }
-      charts = loadChartDependencies().map((dep) => dep.name)
-      const invalidPatch = findInvalidPatchValues(charts)
-      if (invalidPatch.length > 0) {
-        this.error(`invalid chart values: ${invalidPatch.join(', ')}`)
-      }
+    if (charts.length === 0) {
+      charts = loadChartDependencies().map(dep => dep.name)
     } else {
-      if (argv.length === 0) {
-        this.error(`you should set the chart name
-  ex) helm-values mysql redis`)
-      }
-
-      const invalid = findInvalidCharts(argv)
+      const invalid = findUninstalledSubcharts(charts)
       if (invalid.length > 0) {
         this.error(`invalid chart: ${invalid.join(', ')}`)
       }
 
-      const invalidPatch = findInvalidPatchValues(argv)
+      const invalidPatch = findInvalidPatchValues(charts, stage)
       if (invalidPatch.length > 0) {
         this.error(`invalid chart values: ${invalidPatch.join(', ')}`)
       }
+    }
 
-      charts = argv
+    const context = getContext()
+
+    try {
+      const combiner = new Combiner(context, {
+        engine: 'auto',
+        stages: [stage],
+      })
+      const combineResults = await combiner.batch(
+        charts.map(chart => ({
+          chart,
+        })),
+      )
+      combineResults.forEach(cr => {
+        writeOutputs(cr)
+      })
+    } catch (error) {
+      this.error(error)
     }
 
     try {
-      const context = getContext()
-      const combiner = new Combiner(context)
-      const combineResults = combiner.batch(charts.map((chart) => ({
-        chart
-      })))
-      combineResults.forEach((cr) => {
-        writeOutputs(cr)
+      const patcher = new StagePatcher(context, {
+        stage,
+        format: 'yaml',
       })
-
-      const patcher = new StagePatcher(context, { stage })
-      const patchResults = patcher.batch(charts.map((chart) => ({
-        chart
-      })))
-
-      const merger = new Merger(context)
-      const result = merger.action({ type: 'virtualFile', files: patchResults})
+      const patchResults = await patcher.batch(
+        charts.map(chart => ({
+          chart,
+        })),
+      )
+      const merger = new Merger(context, {
+        format: flags.format as 'json'|'yaml',
+        output: flags.output,
+      })
+      const mergeResult = await merger.action({
+        type: 'virtualFile',
+        files: patchResults,
+      })
       writeOutputs([
         {
-          path: p.join(context.helmRoot, 'values.yaml'),
-          content: result.content,
+          path: mergeResult.path,
+          content: mergeResult.content,
         },
       ])
+
+      this.log('Build complete!')
     } catch (error) {
       this.error(error)
     }

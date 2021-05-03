@@ -1,0 +1,7 @@
+stages:
+  - dev
+  - prod
+  - test
+format: yaml
+combine:
+  template: auto

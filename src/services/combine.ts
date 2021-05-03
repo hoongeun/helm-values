@@ -1,78 +1,140 @@
 import * as nunjucks from 'nunjucks'
 import * as ejs from 'ejs'
 import * as p from 'path'
-import * as yaml from 'js-yaml'
 import * as fs from 'fs'
-import {assignIn} from 'lodash'
+import * as inquirer from 'inquirer'
+import {assignIn, cloneDeep} from 'lodash'
 import {BatchOperator} from './base'
 import {Output} from '../lib/output'
-import {parseFile} from '../utils/data'
-import {Context, Engine, File} from '../types'
-import {doesFileExist} from '../utils/path'
+import {groupByStage} from '../lib/chart'
+import {parseFile, parseDatafile} from '../utils/data'
+import {Context, Engine} from '../types'
 
 export type CombineTarget = {
-  chart: string
-}
+  chart: string;
+};
 
-export type CombineResult = Output[]
+export type CombineResult = Output[];
 
 export type CombineOptions = {
-  engine: 'auto'|Engine;
-}
-
-export const DefaultCombineOptions: CombineOptions = {
-  engine: 'auto',
-}
-
+  engine: 'auto' | Engine;
+  stages: string[];
+};
 
 export class Combiner extends BatchOperator<CombineTarget, CombineResult> {
   private options: CombineOptions;
 
-  constructor(context: Context, options?: Partial<CombineOptions>) {
+  private globaldata: object;
+
+  constructor(context: Context, options: CombineOptions) {
     super(context)
-    this.options = Object.assign(DefaultCombineOptions, options)
+    this.options = options
+    this.globaldata = parseDatafile(this.context.valuesDir, 'data')
   }
 
-  public action(target: CombineTarget): CombineResult {
-    let globaldata = {}
-    if (doesFileExist(p.join(this.context.valuesDir, 'global.yaml'))) {
-      globaldata = parseFile(p.join(this.context.valuesDir, 'global.yaml'))
-    } else if (doesFileExist(p.join(this.context.valuesDir, 'global.json'))) {
-      globaldata = parseFile(p.join(this.context.valuesDir, 'global.json'))
+  public async action(target: CombineTarget): Promise<CombineResult> {
+    const groups = groupByStage(target.chart)
+
+    const chartdata: object = parseDatafile(p.join(this.context.valuesDir, target.chart), 'data')
+
+    let stages = this.options.stages
+
+    if (stages.length === 0) {
+      stages = Object.keys(groups.stages)
     }
 
-    let localdata = {}
-    if (doesFileExist(p.join(this.context.valuesDir, target.chart, 'global.yaml'))) {
-      localdata = parseFile(p.join(this.context.valuesDir, target.chart, 'global.yaml'))
-    } else if (doesFileExist(p.join(this.context.valuesDir, target.chart, 'global.json'))) {
-      localdata = parseFile(p.join(this.context.valuesDir, target.chart, 'global.json'))
-    }
+    const combines = await stages.reduce(async (accp, stage) => {
+      const acc = await accp
 
-    const data = assignIn(globaldata, localdata)
-    const templates = fs.readdirSync(p.join(this.context.valuesDir, target.chart), { withFileTypes: true })
-      .filter((dirent) => dirent.isFile() && /^\w+\.\w+\.(njk|ejs))$/.test(dirent.name))
-    return templates.map((template) => this.combineAction(data, p.join(this.context.valuesDir, target.chart, template.name)))
-  }
-
-  private combineAction(data: object, template: string): Output {
-    switch (this.options.engine) {
-      case 'nunjucks':
-        return {
-          path: this.rename(template),
-          content: Combiner.nunjucksAction(template, data),
-        }
-      case 'ejs':
-        return {
-          path: this.rename(template),
-          content: Combiner.ejsAction(template, data),
-        }
-      case 'auto':
-      default:
-        return {
-          path: this.rename(template),
-          content: yaml.dump(Combiner.autoCombineAction(template, data)),
-        }
+      if (!groups.stages[stage]) {
+        return Promise.resolve(acc)
       }
+
+      const needConfirm: { type: string; choices: string[] }[] = []
+      let template: string|undefined
+      let stagedata: object = {}
+
+      if (groups.stages[stage].template.length > 1) {
+        needConfirm.push({
+          type: 'template',
+          choices: groups.stages[stage].template,
+        })
+      } else if (groups.stages[stage].template.length === 1) {
+        template = groups.stages[stage].template[0]
+      }
+
+      if (groups.stages[stage].data.length > 1) {
+        needConfirm.push({
+          type: 'data',
+          choices: groups.stages[stage].data,
+        })
+      } else if (groups.stages[stage].data.length === 1) {
+        stagedata = parseFile(
+          p.join(
+            this.context.valuesDir,
+            target.chart,
+            groups.stages[stage].data[0],
+          ),
+        )
+      }
+
+      if (needConfirm.length > 0) {
+        const answers = await inquirer.prompt(
+          needConfirm.map(confirm => ({
+            type: 'list',
+            name: `${stage} - ${confirm.type}`,
+            message: 'Which one do you want to use?',
+            choices: confirm.choices,
+          })),
+        )
+
+        answers.forEach((answer: string, i: number) => {
+          if (needConfirm[i].type === 'data') {
+            stagedata = parseFile(
+              p.join(this.context.valuesDir, target.chart, answer),
+            )
+          } else {
+            template = answer
+          }
+        })
+      }
+
+      if (template) {
+        acc.push({
+          template,
+          data: assignIn(cloneDeep(this.globaldata), cloneDeep(chartdata), cloneDeep(stagedata)),
+        })
+      }
+
+      return Promise.resolve(acc)
+    }, Promise.resolve([] as { template: string; data: object }[]))
+    return combines.map(combine =>
+      this.combineAction(
+        p.join(this.context.valuesDir, target.chart, combine.template),
+        combine.data,
+      ),
+    )
+  }
+
+  private combineAction(template: string, data: object): Output {
+    switch (this.options.engine) {
+    case 'nunjucks':
+      return {
+        path: Combiner.rename(template),
+        content: Combiner.nunjucksAction(template, data),
+      }
+    case 'ejs':
+      return {
+        path: Combiner.rename(template),
+        content: Combiner.ejsAction(template, data),
+      }
+    case 'auto':
+    default:
+      return {
+        path: Combiner.rename(template),
+        content: Combiner.autoCombineAction(template, data),
+      }
+    }
   }
 
   private static autoCombineAction(path: string, data: object): string {
@@ -82,7 +144,7 @@ export class Combiner extends BatchOperator<CombineTarget, CombineResult> {
     case '.njk':
       return Combiner.nunjucksAction(path, data)
     default:
-      throw new Error('unsupported data format')
+      throw new Error('unsupported template')
     }
   }
 
@@ -93,30 +155,13 @@ export class Combiner extends BatchOperator<CombineTarget, CombineResult> {
 
   private static ejsAction(path: string, data: object): string {
     const content = fs.readFileSync(path)
-    return ejs.render(content.toString(), data, {escape: (markup: any) => markup.toString()})
+    return ejs.render(content.toString(), data, {
+      escape: (markup: any) => markup === undefined ?
+        '' : markup.toString(),
+    })
   }
 
-  /**
-   * rename template to value file
-   * 'name.dev.njk' -> 'name.dev.yaml'
-   * @param path
-   * @private
-   * @return renamed
-   */
-  private rename(path: string): string {
-    return `${p.basename(path, p.extname(path))}.yaml`
+  private static rename(path: string): string {
+    return p.join(p.dirname(path), p.basename(path, p.extname(path)))
   }
 }
-
-function getGlobalData(valuesDir: string): object {
-  if (doesFileExist(p.join(valuesDir, 'global.yaml'))) {
-    return parseFile(p.join(valuesDir, 'global.yaml'))
-  }
-
-  if (doesFileExist(p.join(valuesDir, 'global.json'))) {
-    return parseFile(p.join(valuesDir, 'global.json'))
-  }
-
-  return {}
-}
-

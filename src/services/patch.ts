@@ -1,22 +1,22 @@
 import * as p from 'path'
 import * as yaml from 'js-yaml'
-import { assignIn } from 'lodash'
-import { BatchOperator } from './base'
-import { parseData, parseFile } from '../utils/data'
-import { Context, File } from '../types'
-import { doesFileExist } from '../utils/path'
-
-export type Stage = string
+import {assignIn} from 'lodash'
+import {BatchOperator} from './base'
+import {parseFile} from '../utils/data'
+import {Context, File} from '../types'
+import {doesFileExist} from '../utils/path'
+import {groupByStage} from '../lib/chart'
 
 type PatchOptions = {
-  stage: Stage;
-}
+  stage: string;
+  format: 'yaml'|'json';
+};
 
 export type PatchTarget = {
   chart: string;
-}
+};
 
-export type PatchResult = File
+export type PatchResult = File;
 
 export class StagePatcher extends BatchOperator<PatchTarget, PatchResult> {
   private options: PatchOptions;
@@ -26,39 +26,55 @@ export class StagePatcher extends BatchOperator<PatchTarget, PatchResult> {
     this.options = options
   }
 
-  public action(target: PatchTarget): PatchResult {
-    return patch(this.context.valuesDir, this.options.stage, target)
+  public async action(target: PatchTarget): Promise<PatchResult> {
+    const groups = groupByStage(target.chart)
+
+    if (groups.stages.base?.values.length >= 2) {
+      throw new Error(`conflict ${target.chart} base values: ${groups.stages.base.values.join(', ')}`)
+    }
+
+    if (groups.stages[this.options.stage]?.values.length >= 2) {
+      throw new Error(`conflict ${target.chart} ${this.options.stage} values: ${groups.stages[this.options.stage].values.join(', ')}`)
+    }
+
+    return patch(this.context.valuesDir, this.options.stage, target, this.options.format)
   }
 }
 
-function patch(dir: string, stage: Stage, target: PatchTarget): File {
-  const patchedFile = p.join(dir, target.chart, `values.yaml`)
-  const baseFile = p.join(dir, target.chart, `base.yaml`)
-  const stageFile = p.join(dir, target.chart, `${stage}.yaml`)
+function patch(
+  dir: string,
+  stage: string,
+  target: PatchTarget,
+  format: 'yaml'|'json',
+): PatchResult {
+  let baseValues: object|undefined
+  let stageValues: object|undefined
 
-  if (doesFileExist(baseFile)) {
-    const basedata = parseFile(baseFile)
-    if (doesFileExist(stageFile)) {
-      const stagedata = parseFile(stageFile)
-      return {
-        name: patchedFile,
-        content: yaml.dump(assignIn(basedata, stagedata)),
-      }
-    }
+  if (doesFileExist(p.join(dir, target.chart, 'base.yaml'))) {
+    baseValues = parseFile(p.join(dir, target.chart, 'base.yaml'))
+  } else if (doesFileExist(p.join(dir, target.chart, 'base.json'))) {
+    baseValues = parseFile(p.join(dir, target.chart, 'base.json'))
+  }
 
+  if (doesFileExist(p.join(dir, target.chart, `${stage}.yaml`))) {
+    stageValues = parseFile(p.join(dir, target.chart, `${stage}.yaml`))
+  } else if (doesFileExist(p.join(dir, target.chart, `${stage}.json`))) {
+    stageValues = parseFile(p.join(dir, target.chart, `${stage}.json`))
+  }
+
+  if (baseValues === undefined && stageValues === undefined) {
+    throw new Error("both base and stage file don't exist")
+  }
+
+  if (format === 'json') {
     return {
-      name: patchedFile,
-      content: yaml.dump(basedata),
+      path: p.join(dir, target.chart, 'values.json'),
+      content: JSON.stringify(assignIn(baseValues, stageValues), null, 2),
     }
   }
 
-  if (doesFileExist(stageFile)) {
-    const stagedata = parseFile(stageFile)
-    return {
-      name: patchedFile,
-      content: yaml.dump(stagedata),
-    }
+  return {
+    path: p.join(dir, target.chart, 'values.yaml'),
+    content: yaml.dump(assignIn(baseValues, stageValues)),
   }
-
-  throw new Error('both base and stage file doesn\'t exist')
 }

@@ -1,18 +1,22 @@
 import * as fs from 'fs'
 import * as p from 'path'
-import { doesFileExist, doesDirectoryExist } from '../utils/path'
-import { parseFile } from '../utils/data'
+import {doesFileExist, doesDirectoryExist} from '../utils/path'
+import {parseFile} from '../utils/data'
 
 export function findHelmRoot(): string {
   let path = process.cwd()
 
   function isHelmRoot(path: string): boolean {
-    return doesFileExist(p.join(path, 'Chart.yaml')) &&
+    return (
+      doesFileExist(p.join(path, 'Chart.yaml')) &&
       doesFileExist(p.join(path, '.helmignore'))
+    )
   }
 
-  if (process.env.HELMVALUES_CHART_HOME
-      && doesDirectoryExist(process.env.HELMVALUES_CHART_HOME)) {
+  if (
+    process.env.HELMVALUES_CHART_HOME &&
+    doesDirectoryExist(process.env.HELMVALUES_CHART_HOME)
+  ) {
     if (isHelmRoot(process.env.HELMVALUES_CHART_HOME)) {
       return process.env.HELMVALUES_CHART_HOME
     }
@@ -27,32 +31,104 @@ export function findHelmRoot(): string {
 
   throw new Error('cannot find helm project root')
 }
-
+/**
+ * Find the helm-values subchart values directory
+ *
+ * @export
+ * @return {string[]} - subchart
+ */
 export function findSubchartValuesDir(): string[] {
-  return fs.readdirSync(p.join(findHelmRoot(), 'values'), { withFileTypes: true }).filter((dirents) => dirents.isDirectory()).map((dirent) => dirent.name)
+  return fs
+  .readdirSync(p.join(findHelmRoot(), 'values'), {withFileTypes: true})
+  .filter(dirents => dirents.isDirectory())
+  .map(dirent => dirent.name)
 }
 
+/**
+ * Find the uninstalled helm subchart
+ *
+ * @export
+ * @param {string[]} charts - Charts to check
+ * @return {string[]} - Uninstalled helm subchart
+ */
 export function findUninstalledSubcharts(charts: string[]): string[] {
   const dependencies = loadChartDependencies()
-  return charts.filter((chart) =>
-    dependencies.find((dep) => dep.name === chart) === undefined)
+
+  return charts.filter(
+    chart => dependencies.find(dep => dep.name === chart) === undefined,
+  )
 }
 
-export function findInvalidPatchValues(stage: string, charts: string[]): string[] {
-  const re = new RegExp(`^(${stage}|base)\.(yaml|json)$`)
-  return charts
-    .filter((chart) => {
-      const patchables = fs
-        .readdirSync(p.join(findHelmRoot(), 'values', chart), { withFileTypes: true})
-        .filter((dirent) => dirent.isFile() && re.test(dirent.name))
-      return patchables.length === 0
+/**
+ * Find the invalid chart to combine
+ *
+ * @export
+ * @param {string[]} charts - Charts to check
+ * @param {string[]} stages - A stage to combine
+ * @return {string[]} - Chart that can't combine
+ */
+export function findInvalidCombineValues(
+  charts: string[],
+  stages: string[],
+): string[] {
+  return charts.filter(chart => {
+    const patchables: fs.Dirent[] = []
+    stages.forEach(stage => {
+      const re = new RegExp(`^(${stage}|base).(yaml|json).(njk|ejs)$`)
+      patchables.push(...fs
+      .readdirSync(p.join(findHelmRoot(), 'values', chart), {
+        withFileTypes: true,
+      })
+      .filter(dirent => dirent.isFile() && re.test(dirent.name)),
+      )
     })
+    return patchables.length === 0
+  })
+}
+
+/**
+ * Find the invalid chart to patch
+ *
+ * @export
+ * @param {string[]} charts - Charts to check
+ * @param {string} stage - A stage to patch
+ * @return {string[]} - Chart that can't patch
+ */
+export function findInvalidPatchValues(
+  charts: string[],
+  stage: string,
+): string[] {
+  const re = new RegExp(`^(${stage}|base).(yaml|json)$`)
+  return charts.filter(chart => {
+    const patchables = fs
+    .readdirSync(p.join(findHelmRoot(), 'values', chart), {
+      withFileTypes: true,
+    })
+    .filter(dirent => dirent.isFile() && re.test(dirent.name))
+    return patchables.length === 0
+  })
+}
+
+export function findInvalidMergeValues(charts: string[]): string[] {
+  const chartdirs = fs
+  .readdirSync(p.join(findHelmRoot(), 'values'), {withFileTypes: true})
+  .filter(dirents => dirents.isDirectory())
+  .map(dirent => dirent.name)
+
+  return charts.filter(
+    chart =>
+      chartdirs.find(chartdir => chartdir === chart) === undefined ||
+      !(
+        doesFileExist(p.join(findHelmRoot(), 'values', chart, 'values.yaml')) ||
+        doesFileExist(p.join(findHelmRoot(), 'values', chart, 'values.json'))
+      ),
+  )
 }
 
 export interface ChartDependency {
-  name: string
-  repository: string
-  version: string
+  name: string;
+  repository: string;
+  version: string;
 }
 
 export function loadChartDependencies(): ChartDependency[] {
@@ -60,7 +136,9 @@ export function loadChartDependencies(): ChartDependency[] {
 
   // >= v3
   if (doesFileExist(p.join(helmRoot, 'Chart.yaml'))) {
-    const requirements: { dependencies?: ChartDependency[] } = parseFile(p.join(helmRoot, 'Chart.yaml'))
+    const requirements: { dependencies?: ChartDependency[] } = parseFile(
+      p.join(helmRoot, 'Chart.yaml'),
+    )
     if (requirements.dependencies && requirements.dependencies.length > 0) {
       return requirements.dependencies
     }
@@ -68,7 +146,9 @@ export function loadChartDependencies(): ChartDependency[] {
 
   // <= v2
   if (doesFileExist(p.join(helmRoot, 'requirements.yaml'))) {
-    const requirements: { dependencies?: ChartDependency[] } = parseFile(p.join(helmRoot, 'requirements.yaml'))
+    const requirements: { dependencies?: ChartDependency[] } = parseFile(
+      p.join(helmRoot, 'requirements.yaml'),
+    )
     if (requirements.dependencies && requirements.dependencies.length > 0) {
       return requirements.dependencies
     }
@@ -78,100 +158,101 @@ export function loadChartDependencies(): ChartDependency[] {
 }
 
 export interface SubChart {
-  name: string
-  data: string[]
-  values: string[]
-  stages: { [stage: string]: StageGroup }
+  name: string;
+  data: string[];
+  values: string[];
+  stages: { [stage: string]: StageGroup };
 }
 
 export interface StageGroup {
-  values: string[]
-  data: string[]
-  template: string[]
+  values: string[];
+  data: string[];
+  template: string[];
 }
 
 export function groupByStage(chart: string): SubChart {
   const data: string[] = []
   const values: string[] = []
   const stages = fs
-    .readdirSync(p.join(findHelmRoot(), "values", chart), { withFileTypes: true })
-    .filter((d) => {
-      if (!d.isFile()) {
-        return false
-      }
+  .readdirSync(p.join(findHelmRoot(), 'values', chart), {
+    withFileTypes: true,
+  })
+  .filter(d => {
+    if (!d.isFile()) {
+      return false
+    }
 
-      if (/^data.(yaml|json)$/.test(d.name)) {
-        data.push(d.name)
-        return false
-      }
+    if (/^data.(yaml|json)$/.test(d.name)) {
+      data.push(d.name)
+      return false
+    }
 
-      if (/^values.(yaml|json)$/.test(d.name)) {
-        values.push(d.name)
-        return false
-      }
+    if (/^values.(yaml|json)$/.test(d.name)) {
+      values.push(d.name)
+      return false
+    }
 
-      return true
+    return true
+  })
+  .reduce((acc, dirent) => {
+    const dataRe = new RegExp(/^(\w+)\.data\.(yaml|json)$/)
+    const dataMatches = dirent.name.match(dataRe)
 
-    })
-    .reduce((acc, dirent) => {
-      const dataRe = new RegExp(/^(\w+)\.data\.(yaml|json)$/)
-      const dataMatches = dirent.name.match(dataRe)
-
-      if (dataMatches !== null && dataMatches.length > 0) {
-        if (dataMatches[1] !== 'data' && !acc[dataMatches[1]]) {
-          acc[dataMatches[1]] = {
-            values: [],
-            data: [],
-            template: []
-          }
+    if (dataMatches !== null && dataMatches.length > 0) {
+      if (dataMatches[1] !== 'data' && !acc[dataMatches[1]]) {
+        acc[dataMatches[1]] = {
+          values: [],
+          data: [],
+          template: [],
         }
-
-        acc[dataMatches[1]].data.push(dirent.name)
-
-        return acc
       }
 
-      const templateRe = new RegExp(/^(\w+)\.(yaml|json)\.(njk|ejs)$/)
-      const templateMatches = dirent.name.match(templateRe)
-
-      if (templateMatches !== null && templateMatches.length > 0) {
-        if (templateMatches[1] !== 'data' && !acc[templateMatches[1]]) {
-          acc[templateMatches[1]] = {
-            values: [],
-            data: [],
-            template: []
-          }
-        }
-
-        acc[templateMatches[1]].template.push(dirent.name)
-
-        return acc
-      }
-
-      const valuesRe = new RegExp(/^(\w+)\.(yaml|json)$/)
-      const valuesMatches = dirent.name.match(valuesRe)
-
-      if (valuesMatches !== null && valuesMatches.length > 0) {
-        if (!acc[valuesMatches[1]]) {
-          acc[valuesMatches[1]] = {
-            values: [],
-            data: [],
-            template: []
-          }
-        }
-
-        acc[valuesMatches[1]].values.push(dirent.name)
-
-        return acc
-      }
+      acc[dataMatches[1]].data.push(dirent.name)
 
       return acc
-    }, {} as { [name: string]: StageGroup })
-
-    return {
-      name: chart,
-      data,
-      values,
-      stages,
     }
+
+    const templateRe = new RegExp(/^(\w+)\.(yaml|json)\.(njk|ejs)$/)
+    const templateMatches = dirent.name.match(templateRe)
+
+    if (templateMatches !== null && templateMatches.length > 0) {
+      if (templateMatches[1] !== 'data' && !acc[templateMatches[1]]) {
+        acc[templateMatches[1]] = {
+          values: [],
+          data: [],
+          template: [],
+        }
+      }
+
+      acc[templateMatches[1]].template.push(dirent.name)
+
+      return acc
+    }
+
+    const valuesRe = new RegExp(/^(\w+)\.(yaml|json)$/)
+    const valuesMatches = dirent.name.match(valuesRe)
+
+    if (valuesMatches !== null && valuesMatches.length > 0) {
+      if (!acc[valuesMatches[1]]) {
+        acc[valuesMatches[1]] = {
+          values: [],
+          data: [],
+          template: [],
+        }
+      }
+
+      acc[valuesMatches[1]].values.push(dirent.name)
+
+      return acc
+    }
+
+    return acc
+  }, {} as { [name: string]: StageGroup })
+
+  return {
+    name: chart,
+    data,
+    values,
+    stages,
+  }
 }

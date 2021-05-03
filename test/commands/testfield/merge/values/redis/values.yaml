@@ -1,0 +1,23 @@
+# This is redis chart prod values
+
+master:
+  resources:
+    requests:
+      memory: 2048Mi
+      cpu: 1024m
+
+slave:
+  resources:
+    requests:
+      memory: 2048Mi
+      cpu: 1024m
+
+sentinel:
+  enabled: true
+  resources:
+    requests:
+      memory: 2048Mi
+      cpu: 1024m
+
+metrics:
+  enabled: true

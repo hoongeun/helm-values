@@ -1,52 +1,92 @@
-import { expect, test } from '@oclif/test'
-import { targetType, doesFileExist, doesDirectoryExist, checkInstalled } from '../../src/utils/path'
+import {expect, test} from '@oclif/test'
+import * as p from 'path'
+import {testRoot} from '../utils'
+import {
+  targetType,
+  doesFileExist,
+  doesDirectoryExist,
+  checkInstalled,
+} from '../../src/utils/path'
 
-describe('path utility', () => {
-    test.it('targetType - file', () => {
-        expect(targetType('./fixture/file')).to.string("file")
-    })
+describe('targetType', () => {
+  test.it('file', () => {
+    expect(
+      targetType(p.join(testRoot(), 'utils', 'fixture', 'path', 'file')),
+    ).to.string('file')
+  })
 
-    test.it('targetType - directory', () => {
-        expect(targetType('./fixture/directory')).to.string("dir")
-    })
+  test.it('directory', () => {
+    expect(
+      targetType(p.join(testRoot(), 'utils', 'fixture', 'path', 'directory')),
+    ).to.string('dir')
+  })
 
-    test.it('targetType - error', () => {
-        expect(targetType('./fixture/nonexist')).throw("invalid target")
-    })
+  test
+  .do(() => {
+    targetType(p.join(testRoot(), 'utils', 'fixture', 'path', 'non-exists'))
+  })
+  .catch(
+    `ENOENT: no such file or directory, lstat '${testRoot()}/utils/fixture/path/non-exists'`,
+  )
+  .it('non-exists')
+})
 
-    test.it('targetType - exist file', () => {
-        expect(targetType('./fixture/file')).to.true
-    })
+describe('doesFileExist', () => {
+  test.it('exist file', () => {
+    expect(
+      doesFileExist(p.join(testRoot(), 'utils', 'fixture', 'path', 'file')),
+    ).to.true
+  })
 
-    test.it('doesFileExist - exist file', () => {
-        expect(doesFileExist('./fixture/file')).to.true
-    })
+  test.it('exist directory', () => {
+    expect(
+      doesDirectoryExist(
+        p.join(testRoot(), 'utils', 'fixture', 'path', 'directory'),
+      ),
+    ).to.true
+  })
 
-    test.it('doesFileExist - exist directory', () => {
-        expect(doesFileExist('./fixture/nofile')).to.false
-    })
+  test.it('non-exist', () => {
+    expect(
+      doesFileExist(
+        p.join(testRoot(), 'utils', 'fixture', 'path', 'non-exists'),
+      ),
+    ).to.false
+  })
+})
 
-    test.it('doesFileExist - non-exist', () => {
-        expect(doesFileExist('./fixture/non-exist')).to.false
-    })
+describe('doesDirectoryExist', () => {
+  test.it('exist file', () => {
+    expect(
+      doesDirectoryExist(p.join(testRoot(), 'utils', 'fixture', 'path', 'file')),
+    ).to.false
+  })
 
-    test.it('doesDirectoryExist - exist file', () => {
-        expect(doesDirectoryExist('./fixture/file')).to.false
-    })
+  test.it('exist directory', () => {
+    expect(
+      doesDirectoryExist(
+        p.join(testRoot(), 'utils', 'fixture', 'path', 'directory'),
+      ),
+    ).to.true
+  })
 
-    test.it('doesDirectoryExist - exist directory', () => {
-        expect(doesDirectoryExist('./fixture/directory')).to.true
-    })
+  test.it('non-exist', () => {
+    expect(
+      doesDirectoryExist(
+        p.join(testRoot(), 'utils', 'fixture', 'path', 'non-exists'),
+      ),
+    ).to.false
+  })
+})
 
-    test.it('doesDirectoryExist - non-exist', () => {
-        expect(doesDirectoryExist('./fixture/non-exist')).to.false
-    })
+describe('checkInstalled', () => {
+  test.it('exist', () => {
+    expect(checkInstalled('sh')).to.true
+  })
 
-    test.it('checkInstalled - exist', () => {
-        expect(checkInstalled('sh')).to.true
-    })
-
-    test.it('checkInstalled - non-exist', () => {
-        expect(checkInstalled('mock-binary-that-should-not-exist-in-your-system')).to.false
-    })
+  test.it('non-exist', () => {
+    expect(
+      checkInstalled('mock-binary-that-should-not-installed-in-your-system'),
+    ).to.false
+  })
 })

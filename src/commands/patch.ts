@@ -1,102 +1,87 @@
 import {Command, flags} from '@oclif/command'
-import * as fs from 'fs'
-import * as p from 'path'
 import {getContext} from '../lib/context'
-import {Stage, StagePatcher, PatchTarget} from '../services/patch'
-import {file2Output, print, writeOutputs} from '../lib/output'
+import {StagePatcher} from '../services/patch'
+import {print, writeOutputs} from '../lib/output'
+import {findSubchartValuesDir, findInvalidPatchValues} from '../lib/chart'
 
 export default class Patch extends Command {
+  static strict = false
+
   static examples = [
-    `$ helm-values patch -s dev mysql
+    `$ helm-values patch -s dev -- mysql
 Patch done!`,
-    `$ helm-values patch -a
-Patch done!`,
-  ]
+  ];
 
   static flags = {
     help: flags.help({char: 'h'}),
-    stage: flags.string({char: 's', description: 'stage to patch', required: true}),
-    all: flags.boolean({description: 'patch all if it is possible', default: false}),
-    print: flags.boolean({char: 'p', description: 'print the output in your console', default: false}),
-  }
+    stage: flags.string({
+      char: 's',
+      description: 'stage to patch',
+      required: true,
+    }),
+    print: flags.boolean({
+      char: 'p',
+      description: 'print the output in your console',
+      default: false,
+    }),
+    format: flags.enum({
+      char: 'f',
+      options: ['yaml', 'json'],
+      description: 'preferred format of manifest',
+      default: 'yaml',
+    }),
+  };
 
-  static strict = false
-
-  static args = [{name: 'chart'}]
+  static args = [{name: 'chart'}];
 
   async run() {
     const {flags, argv} = this.parse(Patch)
     const context = getContext()
-    const stage = (flags.stage || process.env.HELM_STAGE) as Stage
+    const stage = flags.stage ?? process.env.HELM_STAGE ?? ''
 
-    if (stage.length > 0) {
-      const patcher = new StagePatcher(context, {
-        stage,
-      })
+    if (!stage) {
+      this.error(
+        "you have to specify the stage by setting --stage(-s) or setting variable 'HELM_STAGE'",
+      )
+    }
 
-      if (flags.all) {
-        if (argv.length > 0) {
-          this.error(`you shouldn't set the charts ${argv.join(', ')}`)
-          return
-        }
-      } else if (argv.length === 0) {
-        this.error(`you should set the name of chart
-ex) helm-values patch -s dev mysql redis`)
-        return
-      }
+    const patcher = new StagePatcher(context, {
+      stage,
+      format: flags.format as 'yaml'|'json',
+    })
 
-      const chartdirs = fs.readdirSync(context.valuesDir, {withFileTypes: true})
-        .filter((dirent) => dirent.isDirectory())
-      const nonexists = argv.filter(argc => !chartdirs.find(d => d.name === argc))
+    let charts: string[] = argv
 
-      if (!flags.all && nonexists.length > 0) {
-        this.error(`there are invalid chart names - ${nonexists.join(', ')}`)
-      }
-
-      const chartFiles = chartdirs.reduce((acc, chartdir) => {
-        const re = new RegExp(/^\w+\.(yaml|json)$/)
-        const envs = fs.readdirSync(p.join(context.valuesDir, chartdir.name), {withFileTypes: true})
-          .filter((dirent) => dirent.isFile() && re.test(dirent.name))
-        envs.forEach((dirent) => {
-          const format = p.extname(dirent.name)
-          const stage = p.extname(p.basename(dirent.name, format))
-          const chart = p.basename(p.basename(dirent.name, format), stage)
-          if (format && stage && chart && [flags.stage, 'base'].includes(stage)) {
-            const idx2 = acc.findIndex(target => target.chart === chart)
-            if (idx2 === -1) {
-              acc.push({
-                chart,
-                [stage]: {
-                  path: p.join(context.valuesDir, chartdir.name, dirent.name),
-                  content: fs.readFileSync(p.join(context.valuesDir, chartdir.name, dirent.name)),
-                },
-              })
-            } else {
-              acc[idx2] = {
-                ...acc[idx2],
-                [stage]: {
-                  path: p.join(context.valuesDir, chartdir.name, dirent.name),
-                  content: fs.readFileSync(p.join(context.valuesDir, chartdir.name, dirent.name)),
-                },
-              }
-            }
-          }
-        })
-        return acc
-      }, [] as PatchTarget[])
-
-      try {
-        const results = patcher.batch(chartFiles)
-        if (flags.print) {
-          print(results.map(file2Output))
-        } else {
-          writeOutputs(results.map(file2Output))
-        }
-      } catch (error) {
-        this.error(error)
-      }
+    if (charts.length === 0) {
+      charts = findSubchartValuesDir()
     } else {
-      this.error('you have to specify the stage by setting --stage(-s) or setting variable \'HELM_STAGE\'')
+      const invalidPatch = findInvalidPatchValues(charts, stage)
+      if (invalidPatch.length > 0) {
+        this.error(`invalid chart values: ${invalidPatch.join(', ')}`)
+      }
+    }
+
+    if (charts.length === 0) {
+      this.error('no charts to patch')
+    }
+
+    try {
+      const results = await patcher.batch(charts.map(chart => ({chart})))
+      if (flags.print) {
+        print(results.map(file => ({
+          path: file.path,
+          content: file.content,
+        })))
+      } else {
+        writeOutputs(results.map(file => ({
+          path: file.path,
+          content: file.content,
+        })))
+      }
+
+      this.log('Patch done!')
+    } catch (error) {
+      this.error(error)
     }
   }
 }

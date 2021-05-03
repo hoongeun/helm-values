@@ -1,72 +1,80 @@
 import {Command, flags} from '@oclif/command'
-import * as p from 'path'
 import {getContext} from '../lib/context'
 import {Merger} from '../services/merge'
 import {print, writeOutputs} from '../lib/output'
-import {findInvalidCharts, findInvalidPatchValues, loadChartDependencies} from '../lib/chart'
+import {
+  findInvalidMergeValues,
+  findSubchartValuesDir,
+} from '../lib/chart'
 
 export default class Merge extends Command {
+  static strict = false
+
   static examples = [
     `$ helm-values merge
 Merge done!`,
-  ]
+  ];
 
   static flags = {
     help: flags.help({char: 'h'}),
-    all: flags.boolean({char: 'a', description: 'merge all charts'}),
-    print: flags.boolean({char: 'p', description: 'print the output in your console', default: false}),
-  }
+    format: flags.enum({
+      char: 'f',
+      options: ['yaml', 'json'],
+      description: 'preferred format of manifest',
+      default: 'yaml',
+    }),
+    print: flags.boolean({
+      char: 'p',
+      description: 'print the output in your console',
+      default: false,
+    }),
+  };
 
-  static strict = false
-
-  static args = [{name: 'chart'}]
+  static args = [{name: 'chart'}];
 
   async run() {
     const {argv, flags} = this.parse(Merge)
 
-    const context = getContext()
-    const merger = new Merger(context)
-    let charts: string[] = []
+    let charts: string[] = argv
 
-    if (flags.all) {
-      if (argv.length > 0) {
-        this.error(`you shouldn't set the charts ${argv.join(', ')}`)
-      }
-      charts = loadChartDependencies().map((dep) => dep.name)
-      const invalidPatch = findInvalidPatchValues(charts)
-      if (invalidPatch.length > 0) {
-        this.error(`invalid chart values: ${invalidPatch.join(', ')}`)
-      }
+    if (charts.length === 0) {
+      charts = findSubchartValuesDir()
     } else {
-      if (argv.length === 0) {
-        this.error(`you should set the chart name
-  ex) helm-values mysql redis`)
-      }
+      const invalid = findInvalidMergeValues(charts)
 
-      const invalid = findInvalidCharts(argv)
       if (invalid.length > 0) {
         this.error(`invalid chart: ${invalid.join(', ')}`)
       }
+    }
 
-      charts = argv
+    if (charts.length === 0) {
+      this.error('no values to merge')
     }
 
     try {
-      const merger = new Merger(context)
-      const result = merger.action({type: 'chart', charts})
+      const context = getContext()
+      const merger = new Merger(context, {
+        format: flags.format as 'json'|'yaml',
+      })
+
+      const result = await merger.action({type: 'chart', charts})
       if (flags.print) {
-        print([{
-          path: '/values.yaml',
-          content: result.content,
-        }])
+        print([
+          {
+            path: result.path,
+            content: result.content,
+          },
+        ])
       } else {
         writeOutputs([
           {
-            path: p.join(context.helmRoot, 'values.yaml'),
+            path: result.path,
             content: result.content,
           },
         ])
       }
+
+      this.log('Merge done!')
     } catch (error) {
       this.error(error)
     }

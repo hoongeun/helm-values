@@ -1,0 +1,8 @@
+name: "values"
+version: "0.0.1"
+usage: "manage multiple subchart values by stage"
+description: "Helm plugin to manage multiple subchart values by stage"
+ignoreFlags: false
+command: "$HELM_PLUGIN_DIR/bin/run"
+hooks:
+  install: "$HELM_PLUGIN_DIR/bin/run --help"

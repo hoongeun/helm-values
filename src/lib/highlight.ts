@@ -1,17 +1,20 @@
 import * as prism from 'prismjs'
 import * as supportsColor from 'supports-color'
-import outdent from 'outdent'
-import * as fs from 'fs'
 
 function highjackRenderer() {
   // @ts-ignore
-  prism.Token = (...args: any[]) => {
+  prism.Token = (...args: any[]) => { // eslint-disable-line no-import-assign
     // @ts-ignore
     prism.Token.apply(this, [].slice.call(args))
   }
 
   // @ts-ignore
-  prism.Token.stringify = function (token: prism.TokenStream, language: string, parent?: (string | prism.Token)[] | undefined, newlines: boolean) {
+  prism.Token.stringify = function (
+    token: prism.TokenStream,
+    language: string,
+    parent?: (string | prism.Token)[] | undefined,
+    newlines?: boolean,
+  ) {
     let ansiMapping: { [key: string]: string }
 
     if (!supportsColor.stdout) {
@@ -48,9 +51,11 @@ function highjackRenderer() {
 
     if (Array.isArray(token)) {
       // @ts-ignore
-      return token.map(function (element) {
+      return token
+      .map(function (element) {
         return prism.Token.stringify(element, language, token)
-      }).join('')
+      })
+      .join('')
     }
 
     const env = {
@@ -94,37 +99,13 @@ export function highlight(text: string, language: string): string {
     grammar = prism.languages[language]
   } catch (error) {
     const languages = Object.keys(require('prismjs/components.js').languages)
-    throw new Error(`Unknown language ${language}, available languages are ${languages.join(', ')}`)
+    throw new Error(
+      `Unknown language ${language}, available languages are ${languages.join(
+        ', ',
+      )}`,
+    )
   }
 
   const tokens = prism.tokenize(text, grammar)
   return prism.Token.stringify(tokens, language)
 }
-
-// fs.writeFileSync('./highlightaaa', highlight(outdent`
-//   str: "string"
-//   boolean: true
-//   number: 100
-//   array:
-//       - item1
-//       - item2
-//   obj:
-//       item1: 1
-//       item2: 2
-//   # comment
-//   `, 'yaml'))
-
-// fs.writeFileSync('./highlightbbb', highlight(outdent`
-//   {
-//     "str": "string",
-//     "boolean": true,
-//     "number": 100,
-//     "array": [
-//       "item1",
-//       "item2"
-//     ],
-//     "obj": {
-//       "item1": 1,
-//       "item2": 2
-//     }
-//   }`, 'json'))

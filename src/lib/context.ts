@@ -16,7 +16,9 @@ export function getBaseContext(): BaseContext {
 
 export function getContext(): Context {
   const baseContext = getBaseContext()
-  const configFile = fs.readFileSync(p.join(baseContext.helmRoot, "values", ".helmvalues"))
+  const configFile = fs.readFileSync(
+    p.join(baseContext.helmRoot, 'values', '.helmvalues'),
+  )
   const config = yaml.load(configFile.toString()) as Config
 
   return {
