@@ -66,7 +66,7 @@ $ npm install -g helm-values
 $ helm-values COMMAND
 running command...
 $ helm-values (-v|--version|version)
-helm-values/0.0.1 linux-x64 node-v14.15.5
+helm-values/0.1.0 linux-x64 node-v14.15.5
 $ helm-values --help [COMMAND]
 USAGE
   $ helm-values COMMAND
@@ -103,7 +103,7 @@ EXAMPLE
   Build complete!
 ```
 
-_See code: [src/commands/build.ts](https://github.com/hoongeun/helm-values/blob/v0.0.1/src/commands/build.ts)_
+_See code: [src/commands/build.ts](https://github.com/hoongeun/helm-values/blob/v0.1.0/src/commands/build.ts)_
 
 ## `helm-values clean [CHART]`
 
@@ -121,7 +121,7 @@ EXAMPLE
   Everything is clear now!
 ```
 
-_See code: [src/commands/clean.ts](https://github.com/hoongeun/helm-values/blob/v0.0.1/src/commands/clean.ts)_
+_See code: [src/commands/clean.ts](https://github.com/hoongeun/helm-values/blob/v0.1.0/src/commands/clean.ts)_
 
 ## `helm-values combine [CHART]`
 
@@ -138,7 +138,7 @@ EXAMPLE
   Combine done!
 ```
 
-_See code: [src/commands/combine.ts](https://github.com/hoongeun/helm-values/blob/v0.0.1/src/commands/combine.ts)_
+_See code: [src/commands/combine.ts](https://github.com/hoongeun/helm-values/blob/v0.1.0/src/commands/combine.ts)_
 
 ## `helm-values generate [CHART]`
 
@@ -169,7 +169,7 @@ EXAMPLES
   Generate mysql, redis successfully!
 ```
 
-_See code: [src/commands/generate.ts](https://github.com/hoongeun/helm-values/blob/v0.0.1/src/commands/generate.ts)_
+_See code: [src/commands/generate.ts](https://github.com/hoongeun/helm-values/blob/v0.1.0/src/commands/generate.ts)_
 
 ## `helm-values help [COMMAND]`
 
@@ -199,7 +199,7 @@ EXAMPLE
   Initiate helm-values!
 ```
 
-_See code: [src/commands/init.ts](https://github.com/hoongeun/helm-values/blob/v0.0.1/src/commands/init.ts)_
+_See code: [src/commands/init.ts](https://github.com/hoongeun/helm-values/blob/v0.1.0/src/commands/init.ts)_
 
 ## `helm-values merge [CHART]`
 
@@ -217,7 +217,7 @@ EXAMPLE
   Merge done!
 ```
 
-_See code: [src/commands/merge.ts](https://github.com/hoongeun/helm-values/blob/v0.0.1/src/commands/merge.ts)_
+_See code: [src/commands/merge.ts](https://github.com/hoongeun/helm-values/blob/v0.1.0/src/commands/merge.ts)_
 
 ## `helm-values patch [CHART]`
 
@@ -236,5 +236,5 @@ EXAMPLE
   Patch done!
 ```
 
-_See code: [src/commands/patch.ts](https://github.com/hoongeun/helm-values/blob/v0.0.1/src/commands/patch.ts)_
+_See code: [src/commands/patch.ts](https://github.com/hoongeun/helm-values/blob/v0.1.0/src/commands/patch.ts)_
 <!-- commandsstop -->

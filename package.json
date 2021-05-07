@@ -1,7 +1,7 @@
 {
   "name": "helm-values",
   "description": "Helm plugin to manage multiple subchart values by stage",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "author": "Hoongeun Cho",
   "bin": {
     "helm-values": "./bin/run"
