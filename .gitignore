@@ -6,10 +6,10 @@
 /package-lock.json
 /tmp
 node_modules
-/test/commands/fixture/
-!/test/commands/fixture/.gitkeep
-/test/utils/fixture/
-!/test/utils/fixture/.gitkeep
+/test/commands/tesfield/
+!/test/commands/tesfield/.gitkeep
+/test/lib/tesfield/
+!/test/lib/tesfield/.gitkeep
 
 
 ### Emacs ###

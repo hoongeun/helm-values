@@ -1,0 +1,11 @@
+{
+  "resources": {
+    "requests": {
+      "memory": "2048Mi",
+      "cpu": "1024m"
+    }
+  },
+  "metrics": {
+    "enabled": true
+  }
+}

@@ -1,0 +1,9 @@
+# This is mysql chart base values
+
+resources:
+  requests:
+    memory: 256Mi
+    cpu: 100m
+
+metrics:
+  enabled: false
